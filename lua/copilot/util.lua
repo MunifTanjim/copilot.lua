@@ -53,17 +53,72 @@ M.get_copilot_client = function()
   end
 end
 
-local normalize_ft = function (ft)
-  local resolve_map = {
-    text = "plaintext",
-    javascriptreact = "javascript",
-    jsx = "javascript",
-    typescriptreact = "typescript",
-  }
-  if not ft or ft == '' then
-    return 'plaintext'
+local eol_by_fileformat = {
+  unix = "\n",
+  dos = "\r\n",
+  mac = "\r",
+}
+
+local language_normalization_map = {
+  text = "plaintext",
+  javascriptreact = "javascript",
+  jsx = "javascript",
+  typescriptreact = "typescript",
+}
+
+local function language_for_file_type(filetype)
+  local ft = string.gsub(filetype, "%..*", "")
+  if not ft or ft == "" then
+    ft = "text"
   end
-  return resolve_map[ft] or ft
+  return language_normalization_map[ft] or ft
+end
+
+local function relative_path(absolute)
+  local relative = vim.fn.fnamemodify(absolute, ":.")
+  if string.sub(relative, 0, 1) == "/" then
+    return vim.fn.fnamemodify(absolute, ":t")
+  end
+  return relative
+end
+
+function M.get_doc()
+  local absolute = vim.api.nvim_buf_get_name(0)
+  local params = vim.lsp.util.make_position_params(0, "utf-16")
+  local doc = {
+    languageId = language_for_file_type(vim.bo.filetype),
+    path = absolute,
+    uri = params.textDocument.uri,
+    relativePath = relative_path(absolute),
+    insertSpaces = vim.o.expandtab,
+    tabSize = vim.fn.shiftwidth(),
+    indentSize = vim.fn.shiftwidth(),
+    position = params.position,
+  }
+
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  if vim.bo.endofline and vim.bo.fixendofline then
+    table.insert(lines, "")
+  end
+  doc.source = table.concat(lines, eol_by_fileformat[vim.bo.fileformat] or "\n")
+
+  return doc
+end
+
+function M.get_doc_params(params)
+  params = params or {}
+  local doc_params = vim.tbl_extend("keep", {
+    doc = vim.tbl_extend("force", M.get_doc(), params.doc or {}),
+  }, params)
+
+  doc_params.textDocument = {
+    uri = doc_params.doc.uri,
+    languageId = doc_params.doc.languageId,
+    relativePath = doc_params.doc.relativePath,
+    position = doc_params.doc.position,
+  }
+
+  return doc_params
 end
 
 M.get_completion_params = function(opts)

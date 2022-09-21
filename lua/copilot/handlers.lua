@@ -1,47 +1,46 @@
-local lsp_handlers = {
-  callbacks = {
-    ["PanelSolution"] = {},
-    ["PanelSolutionsDone"] = {}
+local panel = {
+  callback = {
+    PanelSolution = {},
+    PanelSolutionsDone = {},
   },
 }
 
-local handlers = {
-  ["PanelSolution"] = function (_, result, _, config)
-    if not result then return "err" end
-    if result.panelId and config.callbacks[result.panelId] then
-      config.callbacks[result.panelId](result)
-    elseif not config.callbacks[result.panelId] and result.panelId then
-      return
-    else
-      for _, callback in pairs(config.callbacks) do callback() end
+local mod = {}
+mod.panel = panel
+
+mod.handlers = {
+  ---@param result { panelId: string, completionText: string, displayText: string, range: { ['end']: { character: integer, line: integer }, start: { character: integer, line: integer } }, score: number, solutionId: string }
+  PanelSolution = function (_, result)
+    if panel.callback.PanelSolution[result.panelId] then
+      panel.callback.PanelSolution[result.panelId](result)
     end
   end,
 
-  ["PanelSolutionsDone"] = function (_, _, _, config)
-    for _, callback in pairs(config.callbacks) do
-      callback()
+  ---@param result { panelId: string, status: 'OK'|'Error', message?: string }
+  PanelSolutionsDone = function (_, result)
+    if panel.callback.PanelSolutionsDone[result.panelId] then
+      panel.callback.PanelSolutionsDone[result.panelId](result)
     end
+  end,
+
+  ---@param result { status: string, message: string }
+  ---@param ctx { client_id: integer, method: string }
+  statusNotification = function (_, result, ctx)
   end
 }
 
-lsp_handlers.add_handler_callback = function (handler, fn_name, fn)
-  lsp_handlers.callbacks[handler][fn_name] = fn
-  vim.lsp.handlers[handler] = vim.lsp.with(handlers[handler], {
-    callbacks = lsp_handlers.callbacks[handler]
-  })
+function panel.on_solution(panelId, fn_name, fn)
+  panel.callback[method][fn_name] = fn
 end
 
-lsp_handlers.remove_handler_callback = function (handler, fn_name)
-  lsp_handlers.callbacks[handler][fn_name] = nil
-  vim.lsp.handlers[handler] = vim.lsp.with(handlers[handler], {
-    callbacks = lsp_handlers.callbacks[handler]
-  })
+mod.remove_handler_callback = function (method, fn_name)
+  panel.callback[method][fn_name] = nil
 end
 
-lsp_handlers.remove_all_name = function (fn_name)
-  for handler, _ in pairs(lsp_handlers.callbacks) do
-    lsp_handlers.remove_handler_callback(handler, fn_name)
+mod.remove_all_name = function (fn_name)
+  for handler, _ in pairs(panel.callback) do
+    mod.remove_handler_callback(handler, fn_name)
   end
 end
 
-return lsp_handlers
+return mod

@@ -12,10 +12,10 @@ panel.send_request = function (opts)
   opts = opts or {}
   local client = opts.client or not vim.tbl_isempty(panel.client) and panel.client or util.get_copilot_client()
   if not panel.client then return end
-  local completion_params = util.get_completion_params()
-  completion_params.panelId = opts.uri or panel.uri
+  local params = util.get_doc_params()
+  params.panelId = opts.uri or panel.uri
   local callback = opts.callback or function () end
-  return client.rpc.request("getPanelCompletions", completion_params, callback)
+  return client.rpc.request("getPanelCompletions", params, callback)
 end
 
 function panel.create (client, max_results)

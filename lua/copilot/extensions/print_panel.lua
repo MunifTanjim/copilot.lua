@@ -128,7 +128,8 @@ print_panel.set_options = function ()
   end
 end
 
-print_panel.create = function (bufnr)
+print_panel.create = function (panel)
+  local bufnr = panel.buf
   print_panel.bufnr = bufnr
   print_panel.win = create_win()
   print_panel.last = 1

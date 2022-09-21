@@ -27,7 +27,7 @@ local create_cmds = function (_)
   vim.api.nvim_create_user_command("CopilotPanel", function ()
     local panel = require("copilot.extensions.panel").create()
     panel.send_request()
-    require("copilot.extensions.print_panel").create(panel.buf)
+    require("copilot.extensions.print_panel").create(panel)
   end, {})
 
   vim.api.nvim_create_user_command("CopilotAuth", function()
